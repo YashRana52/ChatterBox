@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Playfair:ital,opsz,wght@0,5..1200,300..900;1,5..1200,300..900&display=swap');
+@import "tailwindcss";
+
+
+
+*{
+     font-family: "Outfit", sans-serif;
+
+
+}
+
+/* global ya component-specific CSS */
+.no-scrollbar {
+  -ms-overflow-style: none; /* Internet Explorer/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* WebKit browsers (Chrome, Safari) */
+}
