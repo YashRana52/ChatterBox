@@ -1,7 +1,9 @@
 import { Inngest } from "inngest";
 import User from "../models/user.js";
+import sendEmail from "../config/nodeMailer.js";
+import Connection from "../models/Connections.js";
 
-// Inngest client (tumhara original ID)
+// Inngest client
 export const inngest = new Inngest({ id: "Chatter-Box" });
 
 // Helper to safely get email from Clerk payload
@@ -131,5 +133,79 @@ const syncUserDeletion = inngest.createFunction(
   }
 );
 
+//inngest function to send remainder when new connection request is added
+
+const sendNewConnectionRequestReminder = inngest.createFunction(
+  { id: "send-new-connection-request-reminder" },
+  { event: "app/connection-request" },
+  async ({ event, step }) => {
+    const { connectionId } = event.data;
+
+    // Pehli email: new request
+    await step.run("send-connection-request-mail", async () => {
+      const connection = await Connection.findById(connectionId).populate(
+        "from_user_id to_user_id"
+      );
+      if (!connection) throw new Error("Connection not found");
+
+      const subject = "👋 New Connection Request";
+      const body = `
+<div style="font-family: Arial, sans-serif; padding: 20px;">
+  <h2>Hi ${connection.to_user_id.full_name},</h2>
+  <p>You have a new connection request from ${connection.from_user_id.full_name} - @${connection.from_user_id.username}</p>
+  <p>Click <a href="${process.env.FRONTEND_URL}/connections" style="color: #1b981;">here</a> to accept or reject the request</p>
+  <br/>
+  <p>Thanks,<br/>Chatter-box - Yash Rana</p>
+</div>`;
+
+      await sendEmail({
+        to: connection.to_user_id.email,
+        subject,
+        body,
+      });
+    });
+
+    // 24 ghante baad reminder
+    const in24Hours = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await step.sleepUntil("wait-for-24-hours", in24Hours);
+
+    await step.run("send-connection-request-reminder", async () => {
+      const connection = await Connection.findById(connectionId).populate(
+        "from_user_id to_user_id"
+      );
+      if (!connection) throw new Error("Connection not found");
+
+      if (connection.status === "accepted") {
+        return {
+          message: "Already accepted",
+        };
+      }
+
+      const subject = "👋 Reminder: Connection Request Pending";
+      const body = `
+<div style="font-family: Arial, sans-serif; padding: 20px;">
+  <h2>Hi ${connection.to_user_id.full_name},</h2>
+  <p>This is a reminder: you have a pending connection request from ${connection.from_user_id.full_name} - @${connection.from_user_id.username}</p>
+  <p>Click <a href="${process.env.FRONTEND_URL}/connections" style="color: #1b981;">here</a> to accept or reject the request</p>
+  <br/>
+  <p>Thanks,<br/>Chatter-box - Yash Rana</p>
+</div>`;
+
+      await sendEmail({
+        to: connection.to_user_id.email,
+        subject,
+        body,
+      });
+    });
+
+    return { message: "Reminder send" };
+  }
+);
+
 // Export functions
-export const functions = [syncUserCreation, syncUserUpdation, syncUserDeletion];
+export const functions = [
+  syncUserCreation,
+  syncUserUpdation,
+  syncUserDeletion,
+  sendNewConnectionRequestReminder,
+];
