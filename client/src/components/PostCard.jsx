@@ -1,21 +1,50 @@
 import { BadgeCheck, Heart, MessageCircle, Share2 } from "lucide-react";
 import React, { useState } from "react";
 import moment from "moment";
-import { dummyUserData } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 function PostCard({ post }) {
   const navigate = useNavigate();
+  const { getToken } = useAuth();
   const postWithHashtags = post.content.replace(
     /(#\w+)/g,
-    '<span class="text-indigo-600">$1<span/>'
+    '<span class="text-indigo-600">$1</span>'
   );
-  const [likes, setLikes] = useState(post.likes_count);
-  const currentUser = dummyUserData;
 
-  const handleLike = async () => {};
+  const [likes, setLikes] = useState(post.likes_count || []);
+  const currentUser = useSelector((state) => state.user.value);
+
+  const handleLike = async () => {
+    try {
+      const { data } = await api.post(
+        `/api/post/like`,
+        { postId: post._id },
+        { headers: { Authorization: `Bearer ${await getToken()}` } }
+      );
+
+      if (data.success) {
+        toast.success(data.message);
+        setLikes((prev) => {
+          if (prev.includes(currentUser._id)) {
+            return prev.filter((id) => id !== currentUser._id);
+          } else {
+            return [...prev, currentUser._id];
+          }
+        });
+      } else {
+        toast(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow p-4 space-y-4 w-full max-w-2xl">
+    <div className="bg-white rounded-xl shadow p-4 space-y-4 w-full max-w-2xl mx-auto">
       {/* user info */}
       <div
         onClick={() => navigate("/profile/" + post.user._id)}
@@ -34,34 +63,41 @@ function PostCard({ post }) {
             <BadgeCheck className="w-4 h-4 text-blue-500" />
           </div>
           <div className="text-gray-400 text-sm flex items-center gap-1">
-            <span> @{post.user.user_name}</span>
-            <span className="text-xs">• </span>
+            <span>@{post.user.user_name}</span>
+            <span className="text-xs">•</span>
             <span>{moment(post.createdAt).fromNow()}</span>
           </div>
         </div>
       </div>
 
       {/* content */}
-
       {post.content && (
         <div
-          className="text-gray-800 text-sm whitespace-pre-line "
+          className="text-gray-800 text-sm whitespace-pre-line"
           dangerouslySetInnerHTML={{ __html: postWithHashtags }}
         />
       )}
+
       {/* images */}
-      <div className="grid grid-cols-2 gap-2">
-        {post.image_urls.map((img, index) => (
-          <img
-            src={img}
-            key={index}
-            alt=""
-            className={`w-full h-48 object-cover rounded-lg ${
-              post.image_urls.length === 1 && "col-span-2 h-auto"
-            }`}
-          />
-        ))}
-      </div>
+      {post?.image_url?.length > 0 && (
+        <div
+          className={`grid gap-2 ${
+            post.image_url.length === 1 ? "grid-cols-1" : "grid-cols-2"
+          }`}
+        >
+          {post.image_url.map((img, index) => (
+            <img
+              key={index}
+              src={img}
+              alt="post"
+              className={`w-full ${
+                post.image_url.length === 1 ? "h-auto" : "h-60"
+              } object-cover rounded-lg`}
+            />
+          ))}
+        </div>
+      )}
+
       {/* actions */}
       <div className="flex items-center gap-4 text-gray-600 text-sm pt-2 border-t border-gray-300">
         <div className="flex items-center gap-1">
@@ -74,20 +110,12 @@ function PostCard({ post }) {
           <span>{likes.length}</span>
         </div>
         <div className="flex items-center gap-1">
-          <MessageCircle
-            className={`w-4 h-4 cursor-pointer ${
-              likes.includes(currentUser._id) && "text-red-500 fill-red-500"
-            }`}
-          />
-          <span>{12}</span>
+          <MessageCircle className="w-4 h-4 cursor-pointer" />
+          <span>{post.comments?.length || 0}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Share2
-            className={`w-4 h-4 cursor-pointer ${
-              likes.includes(currentUser._id) && "text-red-500 fill-red-500"
-            }`}
-          />
-          <span>{5}</span>
+          <Share2 className="w-4 h-4 cursor-pointer" />
+          <span>5</span>
         </div>
       </div>
     </div>

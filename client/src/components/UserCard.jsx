@@ -1,7 +1,9 @@
 import React from "react";
 import { MapPin, MessageCircle, Plus, UserPlus } from "lucide-react";
+import { useSelector } from "react-redux";
 
-function UserCard({ user, currentUser = { following: [], connections: [] } }) {
+function UserCard({ user }) {
+  const currentUser = useSelector((state) => state.user.value);
   const handleFollow = async () => {};
   const handleConnectionRequest = async () => {};
 
