@@ -98,7 +98,7 @@ function StoryModel({ setShowModal, fetchStories }) {
       });
       if (data.success) {
         setShowModal(false);
-        toast.success("Story created successfully");
+
         fetchStories();
       } else {
         toast.error(data.message);

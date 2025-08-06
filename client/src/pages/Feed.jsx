@@ -50,19 +50,24 @@ function Feed() {
       {/* right sidebar */}
       <div className="max-xl:hidden sticky top-0">
         <div className="max-w-xs bg-white text-xs p-4 rounded-md inline-flex flex-col gap-2 shadow">
-          <h3 className="text-slate-800 font-semibold">Sponsred</h3>
+          <h3 className="text-slate-800 font-semibold">About Me</h3>
+
+          {/* Image properly sized */}
           <img
-            className="w-75 h-50 rounded-md"
-            src={assets.sponsored_img}
-            alt=""
+            className="w-full h-40 object-cover rounded-md"
+            src={assets.yash}
+            alt="Profile"
           />
-          <p className="text-slate-500">Email Marketing</p>
+
+          <p className="text-slate-500 font-medium">MERN Developer</p>
+
           <p className="text-slate-400">
-            Turn your dreams into reality! We bring you premium-quality products
-            that are not only affordable but also take your lifestyle to the
-            next level.
+            Hi, I'm Yash Rana – a passionate MERN stack developer. I specialize
+            in building modern, fast, and responsive web applications using
+            MongoDB, Express, React, and Node.js.
           </p>
         </div>
+
         <RecentMessages />
       </div>
     </div>

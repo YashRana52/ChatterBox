@@ -6,7 +6,9 @@ import Story from "../models/Story.js";
 import Message from "../models/Message.js";
 
 // Inngest client
-export const inngest = new Inngest({ id: "Chatter-Box" });
+export const inngest = new Inngest({
+  id: "Chatter-Box",
+});
 
 // Helper to safely get email from Clerk payload
 function getEmail(emailAddresses) {

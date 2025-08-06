@@ -1,24 +1,46 @@
-import React, { useState } from "react";
-import { dummyConnectionsData } from "../assets/assets";
+import React, { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import UserCard from "../components/UserCard";
 import Loading from "../components/Loading";
+import api from "../api/axios";
+import { useAuth } from "@clerk/clerk-react";
+import toast from "react-hot-toast";
+import { useDispatch } from "react-redux";
+import { fetchUser } from "../features/user/userSlice";
 
 function Discover() {
   const [input, setInput] = useState("");
-  const [users, setUsers] = useState(dummyConnectionsData);
+  const [searched, setSearched] = useState(false);
+  const dispatch = useDispatch();
+  const { getToken } = useAuth();
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async (e) => {
     if (e.key === "Enter") {
-      setUsers([]);
-      setLoading(true);
-      setTimeout(() => {
-        setUsers(dummyConnectionsData);
+      setSearched(true);
+      try {
+        setUsers([]);
+        setLoading(true);
+        const { data } = await api.post(
+          "/api/user/discover",
+          { input },
+          {
+            headers: { Authorization: `Bearer ${await getToken()}` },
+          }
+        );
+        data.success ? setUsers(data.users) : toast.error(data.message);
         setLoading(false);
-      }, 1000);
+      } catch (error) {
+        toast.error(error.message);
+        setLoading(false);
+      }
     }
   };
+
+  useEffect(() => {
+    getToken().then((token) => dispatch(fetchUser(token)));
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white py-8">
@@ -56,7 +78,6 @@ function Discover() {
       <div className="max-w-6xl mx-auto px-6">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {/* show placeholders/skeletons if available or just empty cards */}
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
@@ -77,18 +98,24 @@ function Discover() {
           </div>
         ) : (
           <div className="flex flex-wrap gap-6 justify-center">
-            {users.length > 0 ? (
-              users.map((user) => <UserCard user={user} key={user._id} />)
+            {searched ? (
+              users.length > 0 ? (
+                users.map((user) => <UserCard user={user} key={user._id} />)
+              ) : (
+                <p className="text-center w-full text-slate-600">
+                  No results found for "{input}"
+                </p>
+              )
             ) : (
-              <p className="text-center w-full text-slate-600">
-                No results found for "{input}"
+              <p className="text-center w-full text-slate-500">
+                Please enter a search to find users.
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/*  loading  */}
+      {/* Extra loading placeholder */}
       {loading && !users.length && <Loading height="40vh" />}
     </div>
   );

@@ -1,19 +1,82 @@
 import React, { useEffect, useRef, useState } from "react";
-import { dummyMessagesData, dummyUserData } from "../assets/assets";
+
 import { ImageIcon, SendHorizonal } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { useParams } from "react-router-dom";
+import { useAuth } from "@clerk/clerk-react";
+import api from "../api/axios";
+import {
+  addMessage,
+  fetchMessages,
+  resetMessages,
+} from "../features/messages/messagesSlice";
+import toast from "react-hot-toast";
 
 function ChatBox() {
-  const messages = dummyMessagesData;
+  const { messages } = useSelector((state) => state.messages);
+  const { userId } = useParams();
+  const { getToken } = useAuth();
+  const dispatch = useDispatch();
   const [text, setText] = useState(null);
   const [image, setImage] = useState(null);
-  const [user, setUser] = useState(dummyUserData);
+  const [user, setUser] = useState(null);
+
+  const connections = useSelector((state) => state.connections.connections);
 
   const messageEndRef = useRef(null);
 
-  const sendMessage = async () => {};
+  const fetchUserMessages = async () => {
+    try {
+      const token = await getToken();
+      dispatch(fetchMessages({ token, userId }));
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
+  const sendMessage = async () => {
+    try {
+      if (!text && !image) return;
+
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("to_user_id", userId);
+      formData.append("text", text);
+      image && formData.append("image", image);
+
+      const { data } = await api.post("/api/message/send", formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (data.success) {
+        setText("");
+        setImage(null);
+        dispatch(addMessage(data.message));
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+  useEffect(() => {
+    if (messages.length === 0) {
+      fetchUserMessages();
+    }
+    return () => {
+      dispatch(resetMessages());
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (connections.length > 0) {
+      const user = connections.find((connection) => connection._id === userId);
+      setUser(user);
+    }
+  }, [connections, userId]);
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
   return (
     user && (
       <div className="flex flex-col h-screen bg-gray-50">
@@ -74,24 +137,17 @@ function ChatBox() {
 
         {/* Input */}
         <div className="px-4 pb-6">
-          <div className="flex items-center gap-3 pl-5 p-2 bg-white w-full max-w-xl mx-auto border border-gray-200 shadow rounded-full mb-5">
-            <input
-              type="text"
-              className="flex-1 outline-none text-slate-700 bg-transparent placeholder-gray-400 text-sm"
-              placeholder="Type a message..."
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              onChange={(e) => setText(e.target.value)}
-              value={text}
-            />
-            <label htmlFor="image" className="flex items-center">
+          <div className="flex items-center gap-4 px-4 py-3 bg-white w-full max-w-2xl mx-auto border border-gray-300 shadow-md rounded-2xl">
+            {/* Image Preview / Upload */}
+            <label htmlFor="image" className="cursor-pointer relative">
               {image ? (
                 <img
                   src={URL.createObjectURL(image)}
-                  className="h-8 w-8 rounded object-cover border"
+                  className="h-10 w-10 rounded-md object-cover border border-gray-300"
                   alt="preview"
                 />
               ) : (
-                <ImageIcon className="w-7 h-7 text-gray-400 cursor-pointer" />
+                <ImageIcon className="w-6 h-6 text-gray-500 hover:text-indigo-600 transition" />
               )}
               <input
                 type="file"
@@ -101,8 +157,23 @@ function ChatBox() {
                 onChange={(e) => setImage(e.target.files[0])}
               />
             </label>
-            <button className="p-2 rounded-full hover:bg-indigo-100 transition">
-              <SendHorizonal size={18} className="text-indigo-600" />
+
+            {/* Message Input */}
+            <input
+              type="text"
+              className="flex-1 outline-none text-slate-700 placeholder-gray-400 bg-transparent text-sm sm:text-base"
+              placeholder="Type a message..."
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              onChange={(e) => setText(e.target.value)}
+              value={text}
+            />
+
+            {/* Send Button */}
+            <button
+              onClick={sendMessage}
+              className="p-2 rounded-full bg-indigo-100 hover:bg-indigo-200 transition shadow-sm"
+            >
+              <SendHorizonal size={20} className="text-indigo-600" />
             </button>
           </div>
         </div>
