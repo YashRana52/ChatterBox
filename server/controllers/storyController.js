@@ -17,7 +17,7 @@ export const addUserStory = async (req, res) => {
 
     //upload media to imagket
 
-    if (media_type === "image" || media_type === "vidio") {
+    if (media_type === "image" || media_type === "video") {
       const fileBuffer = fs.readFileSync(media.path);
 
       const response = await imagekit.upload({
