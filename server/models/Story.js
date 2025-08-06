@@ -7,7 +7,7 @@ const storySchema = new mongoose.Schema(
     media_url: { type: String },
     media_type: {
       type: String,
-      enum: ["text", "image", "vidio"],
+      enum: ["text", "image", "video"],
       required: true,
     },
     view_count: [{ type: String, ref: "User" }],
